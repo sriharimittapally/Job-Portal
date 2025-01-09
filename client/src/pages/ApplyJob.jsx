@@ -43,21 +43,25 @@ const ApplyJob = () => {
 
   const applyHandler = async () => {
     try {
-      if (!userData) {
-        return toast.error("Login to apply for jobs");
+      // Ensure user is logged in
+      if (!userData || Object.keys(userData).length === 0) {
+        return toast.error("Please log in to apply for jobs.");
       }
+  
+      // Ensure user has uploaded a resume
       if (!userData.resume) {
         navigate("/applications");
-        return toast.error("Upload resume to apply");
+        return toast.error("Please upload your resume to apply for jobs.");
       }
-
+  
       const token = await getToken();
-
+  
       const { data } = await axios.post(
         backendUrl + "/api/users/apply",
         { jobId: jobData._id },
         { headers: { Authorization: `Bearer ${token}` } }
       );
+  
       if (data.success) {
         toast.success(data.message);
         fetchUserApplications();
@@ -68,6 +72,7 @@ const ApplyJob = () => {
       toast.error(error.message);
     }
   };
+  
 
   const checkAlreadyApplied = async () => {
     const hasApplied = userApplications.some(
