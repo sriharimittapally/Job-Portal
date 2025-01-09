@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useState } from "react";
 import Navbar from "../components/Navbar";
-import { assets, jobsApplied } from "../assets/assets";
+import { assets } from "../assets/assets";
 import moment from "moment";
 import Footer from "../components/Footer";
 import { AppContext } from "../context/AppContext";
@@ -12,54 +12,75 @@ import Loading from "../components/Loading";
 const Applications = () => {
   const [isEdit, setIsEdit] = useState(false);
   const [resume, setResume] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const {user} = useUser();
-  const {getToken} = useAuth();
+  const { user } = useUser();
+  const { getToken } = useAuth();
+  const {
+    backendUrl,
+    userData,
+    userApplications,
+    fetchUserData,
+    fetchUserApplications,
+  } = useContext(AppContext);
 
-  const {backendUrl, userData, userApplications, fetchUserData, fetchUserApplications} = useContext(AppContext);
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file && file.type !== "application/pdf") {
+      toast.error("Please upload a PDF file.");
+      setResume(null);
+    } else {
+      setResume(file);
+    }
+  };
 
-  const updateResume = async() =>{
+  const updateResume = async () => {
     try {
       const formData = new FormData();
-      formData.append('resume', resume);
+      formData.append("resume", resume);
 
       const token = await getToken();
-
-      const {data} = await axios.post(backendUrl+'/api/users/update-resume',formData,{
-        headers:{
-          Authorization: `Bearer ${token}`
+      const { data } = await axios.post(
+        `${backendUrl}/api/users/update-resume`,
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         }
-      })
+      );
+
       if (data.success) {
-        toast.success(data.message)
-        await fetchUserData()   
-         }else{
-          toast.error(data.message);
-         }
+        toast.success(data.message);
+        await fetchUserData();
+      } else {
+        toast.error(data.message);
+      }
     } catch (error) {
       toast.error(error.message);
     }
 
     setIsEdit(false);
     setResume(null);
-  } 
+  };
 
-  useEffect(()=>{
-   if (user) {
-    fetchUserApplications()
-   }
-  },[user])
+  useEffect(() => {
+    if (user) {
+      fetchUserApplications().finally(() => setLoading(false));
+    }
+  }, [user]);
 
+  if (loading) {
+    return <Loading />;
+  }
 
-
-
-  return  (
+  return (
     <>
       <Navbar />
-      <div className="conatiner px-4 min-h-[65vh] 2xl:px-20 mx-auto my-10">
+      <div className="container px-4 min-h-[65vh] 2xl:px-20 mx-auto my-10">
         <h2 className="text-xl font-semibold">Your Resume</h2>
         <div className="flex gap-2 mb-6 mt-3">
-          {isEdit  || userData && userData.resume === "" ? (
+          {isEdit || (userData && userData.resume === "") ? (
             <>
               <label className="flex items-center" htmlFor="resumeUpload">
                 <p className="bg-blue-100 text-blue-600 px-4 py-2 rounded-lg mr-2">
@@ -70,9 +91,9 @@ const Applications = () => {
                   hidden
                   id="resumeUpload"
                   accept="application/pdf"
-                  onChange={(e) => setResume(e.target.files[0])}
+                  onChange={handleFileChange}
                 />
-                <img src={assets.profile_upload_icon} alt="" />
+                <img src={assets.profile_upload_icon} alt="Upload icon" />
               </label>
               <button
                 onClick={updateResume}
@@ -83,8 +104,10 @@ const Applications = () => {
             </>
           ) : (
             <div className="flex gap-2">
-              <a target="_blank"
-                className="bg-blue-100 text-blue-600  px-4 py-2 rounded-lg"
+              <a
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-blue-100 text-blue-600 px-4 py-2 rounded-lg"
                 href={userData.resume}
               >
                 Resume
@@ -102,10 +125,10 @@ const Applications = () => {
         <table className="min-w-full bg-white border rounded-lg">
           <thead>
             <tr>
-              <th className="py-3 px-4 border-b text-left">Comapny</th>
+              <th className="py-3 px-4 border-b text-left">Company</th>
               <th className="py-3 px-4 border-b text-left">Job Title</th>
               <th className="py-3 px-4 border-b text-left max-sm:hidden">
-                Loaction
+                Location
               </th>
               <th className="py-3 px-4 border-b text-left max-sm:hidden">
                 Date
@@ -114,42 +137,62 @@ const Applications = () => {
             </tr>
           </thead>
           <tbody>
-            {userApplications.map((job, index) =>
-              true ? (
+            {userApplications.length === 0 ? (
+              <tr>
+                <td colSpan="5">No jobs applied</td>
+              </tr>
+            ) : (
+              userApplications.map((job, index) => (
                 <tr key={index}>
                   <td className="py-3 px-4 flex items-center gap-2 border-b">
-                    <img className="w-8 h-8" src={job.companyId.image} alt="" />
-                    {job.companyId.name}
+                    {job.companyId && job.companyId.image ? (
+                      <img
+                        className="w-8 h-8"
+                        src={job.companyId.image}
+                        alt=""
+                      />
+                    ) : (
+                      <div>No Image</div>
+                    )}
+                    {job.companyId && job.companyId.name
+                      ? job.companyId.name
+                      : "Unknown Company"}
                   </td>
-                  <td className="py-2 px-4 border-b">{job.jobId.title}</td>
-                  <td className="py-2 px-4 border-b  max-sm:hidden">
-                    {job.jobId.location}
+                  <td className="py-2 px-4 border-b">
+                    {job.jobId && job.jobId.title
+                      ? job.jobId.title
+                      : "Unknown Title"}
                   </td>
-                  <td className="py-2 px-4 border-b  max-sm:hidden">
-                    {moment(job.date).format("ll")}
+                  <td className="py-2 px-4 border-b max-sm:hidden">
+                    {job.jobId && job.jobId.location
+                      ? job.jobId.location
+                      : "Unknown Location"}
                   </td>
-                  <td className="py-2 px-4 border-b ">
-                    <span 
+                  <td className="py-2 px-4 border-b max-sm:hidden">
+                    {job.date ? moment(job.date).format("ll") : "No Date"}
+                  </td>
+                  <td className="py-2 px-4 border-b">
+                    <span
                       className={`${
                         job.status === "Accepted"
                           ? "bg-green-200"
                           : job.status === "Rejected"
                           ? "bg-red-200"
                           : "bg-blue-200"
-                      } px-4 py-1.5 rounded `}
+                      } px-4 py-1.5 rounded`}
                     >
-                      {job.status}
+                      {job.status || "Pending"}
                     </span>
                   </td>
                 </tr>
-              ) : null
+              ))
             )}
           </tbody>
         </table>
-        <Footer/>
+        <Footer />
       </div>
     </>
-  )
+  );
 };
 
 export default Applications;

@@ -155,7 +155,7 @@ const ApplyJob = () => {
 
             {/* Right Section */}
             <div className="w-full lg:w-1/3 mt-8 lg:mt-0 lg:ml-8 space-y-5">
-              <h2>More jobs from {jobData.name}</h2>
+              <h2>More jobs from {jobData.companyId.name}</h2>
               {jobs
                 .filter(
                   (job) =>
